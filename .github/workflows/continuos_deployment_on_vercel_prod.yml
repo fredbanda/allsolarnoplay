@@ -1,19 +1,39 @@
-name: Vercel Preview Deployment
+name: Vercel Production Deployment
+
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_PROD_ID }}
+
 on:
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment (production or preview)'
+        required: true
+        default: 'production'
+
 jobs:
-  Deploy-Preview:
+  Deploy-Vercel:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
+
       - name: Pull Vercel Environment Information
-        run: vercel pull --yes --environment=PRODUCTION --token=${{ secrets.VERCEL_TOKEN }}
+        run: |
+          vercel pull --yes \
+            --environment=${{ github.event.inputs.environment }} \
+            --token=${{ secrets.VERCEL_TOKEN }}
+
       - name: Build Project Artifacts
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        if: ${{ github.event.inputs.environment == 'preview' }}
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+
       - name: Deploy Project Artifacts to Vercel
-        run: vercel deploy --prod --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+        run: |
+          vercel deploy \
+            --${{ github.event.inputs.environment == 'production' && 'prod' || 'prebuilt' }} \
+            --token=${{ secrets.VERCEL_TOKEN }}
